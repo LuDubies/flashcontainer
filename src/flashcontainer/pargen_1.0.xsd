@@ -29,7 +29,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  -->
 
- <!-- XSD grammer for pargen XML input -->
+ <!-- XSD grammar for pargen XML input -->
 
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
     targetNamespace="http://nhjschulz.github.io/1.0/pargen"
@@ -40,7 +40,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <xs:element name="pargen">
         <xs:complexType>
             <xs:sequence minOccurs="1" maxOccurs="unbounded">
-                <xs:element name="container">
+                <xs:element name="struct" type="pargen:struct" minOccurs="0" maxOccurs="unbounded"></xs:element>
+                <xs:element name="container" minOccurs="1" maxOccurs="unbounded">
                     <xs:complexType>
                         <xs:sequence>
                             <xs:element name="blocks">
@@ -58,6 +59,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             </xs:sequence>
         </xs:complexType>
     </xs:element>
+
+    <xs:complexType name="struct">
+        <xs:sequence>
+            <xs:element name="param"></xs:element>
+        </xs:sequence>
+        <xs:attribute name="name" type="pargen:identifier" use="required" />
+        <xs:attribute name="field_alignment" type="pargen:boolean" use="optional" default="True"/>
+        <xs:attribute name="struct_alignment" type="pargen:boolean" use="optional" default="True"/>
+        <xs:attribute name="stride" type="pargen:boolean" use="optional" default="True"/>
+    </xs:complexType>
 
     <xs:complexType name="block">
         <xs:sequence>
@@ -213,6 +224,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <xs:restriction base="xs:string">
             <xs:enumeration value="LE" />
             <xs:enumeration value="BE" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="boolean">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="True" />
+            <xs:enumeration value="False" />
         </xs:restriction>
     </xs:simpleType>
 
