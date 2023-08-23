@@ -248,16 +248,21 @@ class XmlParser:
     def _build_model(root: ET.Element, filename: str) -> DM.Model:
         model = DM.Model(filename)
 
-        # iterate over container list
+        # iterate over structs and containers
         for element in root:
-            address = XmlParser._parse_int(element.get("at"))
-            name = element.get("name")
+            if 'container' in element.tag:
+                address = XmlParser._parse_int(element.get("at"))
+                name = element.get("name")
 
-            container = DM.Container(name, address)
-            logging.info("Loading container definition for %s", name)
-            XmlParser._build_blocks(container, element)
+                container = DM.Container(name, address)
+                logging.info("Loading container definition for %s", name)
+                XmlParser._build_blocks(container, element)
 
-            model.add_container(container)
+                model.add_container(container)
+            elif 'struct' in element.tag:
+                name = element.get("name")
+                filloption = element.get("filloption")
+                logging.info("Found struct with name %s and filloption %s!", name, filloption)
 
         return model
 

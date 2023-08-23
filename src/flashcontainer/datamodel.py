@@ -323,11 +323,17 @@ class Model:
     def __init__(self, name):
         self.name = name
         self.container = []
+        self.datastructs = []
 
     def add_container(self, container):
         """Append container to model"""
 
         self.container.append(container)
+
+    def add_struct(self, strct):
+        """Paaned data struct to model"""
+        # TODO check for double names!!!!!!!!!!!!!!
+        self.datastructs.append(strct)
 
     def __str__(self):
         return f"Model({self.name} {self.container})"
