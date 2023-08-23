@@ -113,7 +113,7 @@ Added the struct attribute to the parameter element, designating the struct to u
 Additional changes that might be needed for integrating the new feature:
 
 * Adjust pargen XSD version numbering (old XML will stay valid, but new features deserve at least a new minor version)
-
+* Do structs ever need more stric alignment than their struct alignment? That would require an extra option.
 
 
 ## Review

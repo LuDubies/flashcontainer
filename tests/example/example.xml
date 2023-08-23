@@ -16,7 +16,7 @@
                         <pd:comment>expected: CBF43926</pd:comment>
                         <pd:memory from="0x10" to="."></pd:memory>
                     </pd:crc>
-                   <pd:param offset="0x20" name="tag" type="int16">
+                    <pd:param offset="0x20" name="tag" type="int16">
                             <pd:comment>Integer array example</pd:comment>
                             <pd:value>[-4, -3, -2, -1, 0, 1, 2, 3, 4]</pd:value>
                         </pd:param>
