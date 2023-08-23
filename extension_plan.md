@@ -47,7 +47,7 @@ the full README on feature merge.
 The overall XML structure will be extended to feature struct elements that are defined outside of the containers that define the memory layout.
 
         <pd:struct>
-            <pd:parameter>
+            <pd:field>
             ...
         </pd:struct>
         <pd:container>
@@ -69,10 +69,10 @@ the parameters type will be interpreted as the struct. A struct features multipl
 |Attribute         |Description                   |optional| default |
 |------------------|------------------------------|--------|---------|
 | name             | The structs name.            |   No   |         |
-| fill             | byte value used for padding  |   Yes  |  parent |
-| field_alignment  | apply field alignment        |   Yes  |   True  |
-| struct_alignment | apply struct alignment       |   Yes  |   True  |
-| stride           | apply stride buffer          |   Yes  |   True  |
+| fill             | Byte value used for padding  |   Yes  |  parent |
+| field_alignment  | Apply field alignment        |   Yes  |   True  |
+| struct_alignment | Apply struct alignment       |   Yes  |   True  |
+| stride           | Apply stride buffer          |   Yes  |   True  |
 
 Field alignment will ensure that the data of the structs fields is self aligned **relative to the structs address**.
 This means that 2 byte data types can only start at 2 byte offsets to the struct address (4 byte types at 4 byte offsets, ...).
@@ -80,12 +80,33 @@ Struct alignment will apply a similar constraint to the starting address of the 
 A struct encompassing a uint64 field can only start at addresses divisible by 8 for example.
 Application of field and struct alignment will ensure pargen structs feature the same memory layout as C-structs.
 Additionally, the stride parameter will result in additional padding up to the structs stride address (the address where the next struct of the same type could start in memory).
+Struct parameters will start at the next valid address from their offset.
 
 The fill value will be used as padding, with the additional options of "parent" and "random".
 Choosing **parent** will use the fill value of a parameters encompassing block, the **random** option will randomly fill the padding bytes.
 
 The total memory footprint / size of the struct is highly dependent on the chosen alignment options, as they might result in padding bytes between and after the fields of the struct.
 While most compilers for almost all instruction sets and architectures will feature self alignment of C-structs, the options can also be switched of to result in densely packed data in memory.
+
+### The Field Element
+
+A field is the basic building block of a struct and serves as a placeholder for a value of a basic type in instances of the struct.
+Unlike parameter elements in a block, a field does not hold offset or alignment information, as the alignment strategy is set by the encompassing structs attributes.
+The basic type of the field defines its size and content interpretation.
+
+|Attribute         |Description                   |optional| default |
+|------------------|------------------------------|--------|---------|
+| name             | The fields name.             |   No   |         |
+| type             | Basic type of the field      |   No   |         |
+
+
+### Appendix To Parameter Element
+
+Added the struct attribute to the parameter element, designating the struct to use when the type of the parameter is set to "complex".
+
+|Attribute         |Description                   |optional| default |
+|------------------|------------------------------|--------|---------|
+| struct           | Struct of the parameter      |   Yes  |    ""   |
 
 ## Additional Notes
 
