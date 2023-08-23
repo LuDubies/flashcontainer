@@ -39,7 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     <xs:element name="pargen">
         <xs:complexType>
-            <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:sequence minOccurs="1" maxOccurs="1">
                 <xs:element name="struct" type="pargen:struct" minOccurs="0" maxOccurs="unbounded"></xs:element>
                 <xs:element name="container" minOccurs="1" maxOccurs="unbounded">
                     <xs:complexType>
