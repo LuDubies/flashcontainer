@@ -261,7 +261,7 @@ class XmlParser:
                 model.add_container(container)
             elif 'struct' in element.tag:
                 name = element.get("name")
-                filloption = element.get("filloption")
+                filloption = element.get("fill")
                 logging.info("Found struct with name %s and filloption %s!", name, filloption)
 
         return model

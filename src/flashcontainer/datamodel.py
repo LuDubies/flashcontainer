@@ -331,8 +331,7 @@ class Model:
         self.container.append(container)
 
     def add_struct(self, strct):
-        """Paaned data struct to model"""
-        # TODO check for double names!!!!!!!!!!!!!!
+        """Append data struct to model"""
         self.datastructs.append(strct)
 
     def __str__(self):
