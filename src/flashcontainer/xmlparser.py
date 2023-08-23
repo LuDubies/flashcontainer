@@ -32,7 +32,7 @@
 import logging
 import pathlib
 import os
-from typing import Dict
+from typing import Dict, Optional
 
 import lxml.etree as ET
 
@@ -48,12 +48,12 @@ class XmlParser:
     """XML Parser to generate a datamodel from an XML file"""
 
     @classmethod
-    def from_file(cls, file: str, values: Dict[str, str] = None) -> DM.Model:
+    def from_file(cls, file: str, values: Dict[str, str] = None) -> Optional[DM.Model]:
         """Parser entry point returning model instance"""
         return cls.parse(file, values)
 
     @staticmethod
-    def parse(file: str, values: Dict[str, str]) -> DM.Model:
+    def parse(file: str, values: Dict[str, str]) -> Optional[DM.Model]:
         """ Parse given XML file into data model. """
         model = None
         try:
