@@ -62,7 +62,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     <xs:complexType name="struct">
         <xs:sequence>
-            <xs:element name="field"></xs:element>
+            <xs:element name="comment" type="pargen:textonly" minOccurs="0" maxOccurs="1"></xs:element>
+            <xs:element name="field" minOccurs="1"></xs:element>
         </xs:sequence>
         <xs:attribute name="name" type="pargen:identifier" use="required" />
         <xs:attribute name="fill" type="pargen:filloption" use="optional" default="parent"/>
@@ -233,7 +234,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             <xs:enumeration value="float32" />
             <xs:enumeration value="float64" />
             <xs:enumeration value="utf8" />
-            <xs:enumeration value="struct" />
+            <xs:enumeration value="complex" />
         </xs:restriction>
     </xs:simpleType>
 

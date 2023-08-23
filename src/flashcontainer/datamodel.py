@@ -31,12 +31,13 @@
 #
 
 from enum import Enum
-from typing import Dict, NamedTuple
+from typing import Dict, NamedTuple, Union
 import struct
 import logging
 from collections import namedtuple
 from operator import attrgetter
 from dataclasses import dataclass
+from itertools import chain
 
 from flashcontainer.checksum import Crc, CrcConfig
 
@@ -82,10 +83,10 @@ class Endianness(Enum):
     BE = 2    # big endian (like Motorola 68k)
 
 
-class Block: # pylint: disable=too-many-instance-attributes
+class Block:
     """Block data container """
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(
         self,
         addr: int, name: str,
         length: int, endianess: Endianness, fill: int):
@@ -234,8 +235,10 @@ class Block: # pylint: disable=too-many-instance-attributes
         return f"Block({self.name} @ {hex(self.addr)})"
 
 
-class ParamType(Enum):
-    """Supported data types"""
+
+
+class BasicType(Enum):
+    """Supported basic data types"""
     UINT32 = 1
     UINT8 = 2
     UINT16 = 3
@@ -247,21 +250,27 @@ class ParamType(Enum):
     FLOAT32 = 9
     FLOAT64 = 10
     UTF8 = 11
-    GAPFILL = 12
 
+class SpecialType(Enum):
+    """Additional types for padding and structs"""
+    GAPFILL = 12
+    COMPLEX = 13
+
+ParamType = Enum('ParamType', [(i.name, i.value) for i in chain(BasicType, SpecialType)])
 
 class Parameter:
     """Parameter definition data container"""
 
     def __init__(self, # pylint: disable=too-many-arguments
             offset: int, name: str, ptype: ParamType,
-            value: bytearray, crc: CrcData = None):
+            value: bytearray, crc: CrcData = None, datastruct = None):
         self.offset = offset
         self.name = name
         self.ptype = ptype
         self.value = value
         self.comment = None
         self.crc_cfg = crc
+        self.datastruct = datastruct
 
     @classmethod
     def as_gap(cls, address: int, length: int, pattern: int):
@@ -283,8 +292,12 @@ class Parameter:
         self.comment = comment
 
     def __str__(self):
-        return f"{self.name} @ {hex(self.offset)} = {self.value.hex()} "\
-            f"len={len(self.value)}({hex(len(self.value))}) /* {self.comment } */"
+        if self.datastruct is None:
+            return f"{self.name} @ {hex(self.offset)} = {self.value.hex()} "\
+                f"len={len(self.value)}({hex(len(self.value))}) /* {self.comment } */"
+        else:
+            return f"{self.name} @ {hex(self.offset)} of type {self.datastruct} "\
+                f"/* {self.comment } */"
 
 
 class Container:
@@ -329,6 +342,54 @@ class Model:
             print("")
 
         return validator.result
+
+
+@dataclass
+class Field:
+    """ Field in a struct """
+    name: str
+    type: BasicType
+    comment: str = None
+
+    def get_size(self) -> int:
+        """Returns the size of the basic type and therefore the field"""
+        return TYPE_DATA[ParamType(self.type.value)].size
+
+
+class Datastruct:
+    """ Class to hold struct type information """
+
+    def __init__(self, name: str, filloption: Union[int, str],
+                  field_alignment = True, struct_alignment = True, stride_padding = True) -> None:
+        self.name = name
+        self.fields = []
+        if isinstance(filloption, int):
+            self.filloption = filloption & 0xFF
+        else:
+            self.filloption = filloption
+        self.field_alignment = field_alignment
+        self.struct_alignment = struct_alignment
+        self.stide_padding = stride_padding
+        self.comment = None
+
+    def set_comment(self, comment: str) -> None:
+        """Set optional comment"""
+        self.comment = comment
+
+    def add_field(self, field: Field) -> None:
+        """Add field to the data struct"""
+        self.fields.append(field)
+
+    def get_size_at_address(self, address: int) -> int:
+        """Calculates the bytes the struct requires in memory with its alignment configuration.
+        This includes padding due to struct alignment, field alignment and stride"""
+
+        # consider struct alignment
+
+        # then traverse fields
+
+        # then calc stride addr
+        return address
 
 
 class Walker:
@@ -524,6 +585,7 @@ class Validator(Walker):
 # ctype: C-Language type
 TypeData = namedtuple('TypeData', ['fmt', 'size', 'width', 'signed', 'ctype'])
 
+
 TYPE_DATA = {
     ParamType.UINT32:  TypeData("L", 4, 10, False, "uint32_t"),
     ParamType.UINT8:   TypeData("B", 1, 4, False, "uint8_t"),
@@ -535,5 +597,5 @@ TYPE_DATA = {
     ParamType.INT64:   TypeData("q", 8, 16, True, "int64_t"),
     ParamType.FLOAT32: TypeData("f", 4, 12, True, "float"),
     ParamType.FLOAT64: TypeData("d", 8, 16, True, "double"),
-    ParamType.UTF8:    TypeData("1c", 1, 4, False, "char")
+    ParamType.UTF8:    TypeData("1c", 1, 4, False, "char"),
 }
