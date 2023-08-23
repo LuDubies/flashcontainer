@@ -62,12 +62,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     <xs:complexType name="struct">
         <xs:sequence>
-            <xs:element name="param"></xs:element>
+            <xs:element name="field"></xs:element>
         </xs:sequence>
         <xs:attribute name="name" type="pargen:identifier" use="required" />
+        <xs:attribute name="fill" type="pargen:filloption" use="optional" default="parent"/>
         <xs:attribute name="field_alignment" type="pargen:boolean" use="optional" default="True"/>
         <xs:attribute name="struct_alignment" type="pargen:boolean" use="optional" default="True"/>
         <xs:attribute name="stride" type="pargen:boolean" use="optional" default="True"/>
+    </xs:complexType>
+
+    <xs:complexType name="field">
+        <xs:sequence>
+            <xs:element name="comment" type="pargen:textonly" minOccurs="0" maxOccurs="1"></xs:element>
+        </xs:sequence>
+        <xs:attribute name="name" type="pargen:identifier" use="required" />
+        <xs:attribute name="type" type="pargen:type" use="required" />
     </xs:complexType>
 
     <xs:complexType name="block">
@@ -109,6 +118,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <xs:attribute name="offset" type="pargen:address" use="required" />
         <xs:attribute name="name" type="pargen:identifier" use="required" />
         <xs:attribute name="type" type="pargen:type" use="required" />
+        <xs:attribute name="struct" type="pargen:identifier" use="optional" default="" />
         <xs:attribute name="align" type="pargen:align" use="optional" default="1" />
     </xs:complexType>
 
@@ -170,6 +180,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         </xs:restriction>
     </xs:simpleType>
 
+    <xs:simpleType name="filloption">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="0x[0-9a-fA-F]{1,2}|0|[1-2][0-9]{0,2}|parent|random"></xs:pattern>
+        </xs:restriction>
+    </xs:simpleType>
+
     <xs:simpleType name="uint16">
         <xs:restriction base="xs:string">
             <xs:pattern value="0x[0-9a-fA-F]{1,4}|0|[1-9][0-9]{0,5}" />
@@ -217,6 +233,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             <xs:enumeration value="float32" />
             <xs:enumeration value="float64" />
             <xs:enumeration value="utf8" />
+            <xs:enumeration value="struct" />
         </xs:restriction>
     </xs:simpleType>
 
