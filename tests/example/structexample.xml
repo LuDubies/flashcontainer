@@ -3,13 +3,19 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://nhjschulz.github.io/1.0/pargen ./../../src/flashcontainer/pargen_1.0.xsd" >
     <pd:struct name="SimpleS" fill="parent">
-        <pd:field name="int1" type="uint8" />
-        <pd:field name="int2" type="uint8" />
+        <pd:comment>This struct is super simple</pd:comment>
+        <pd:fields>
+            <pd:field name="int1" type="uint8" />
+            <pd:field name="int2" type="uint8" />
+        </pd:fields>
     </pd:struct>
     <pd:struct name="ComplexS" fill="parent">
-        <pd:field name="int1" type="uint8" />
-        <pd:field name="int2" type="uint64" />
-        <pd:field name="int3" type="uint16" />
+        <pd:comment>This struct will feature padding</pd:comment>
+        <pd:fields>
+            <pd:field name="int1" type="uint8" />
+            <pd:field name="int2" type="uint64" />
+            <pd:field name="int3" type="uint16" />
+        </pd:fields>
     </pd:struct>
     <pd:container name="CodeFlash" at="0x80000000">
         <pd:blocks>
