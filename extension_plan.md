@@ -47,8 +47,10 @@ the full README on feature merge.
 The overall XML structure will be extended to feature struct elements that are defined outside of the containers that define the memory layout.
 
         <pd:struct>
-            <pd:field>
-            ...
+            <pd:fields>
+                <pd:field>
+                ...
+            </pd:fields>
         </pd:struct>
         <pd:container>
             <pd:blocks>
