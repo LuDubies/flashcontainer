@@ -117,7 +117,4 @@ def test_parse_structs():
     assert len(model.datastructs[1].fields) == 3
     assert "much padding" in model.get_struct_by_name("ComplexS").fields[1].comment
     assert model.get_struct_by_name("idonotexist") is None
-
-    assert model.datastructs[0].struct_alignment is False
-    assert model.datastructs[0].field_alignment is True
     

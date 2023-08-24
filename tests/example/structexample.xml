@@ -2,7 +2,7 @@
 <pd:pargen xmlns:pd="http://nhjschulz.github.io/1.0/pargen"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://nhjschulz.github.io/1.0/pargen ./../../src/flashcontainer/pargen_1.0.xsd" >
-    <pd:struct name="SimpleS" fill="parent" struct_alignment="False">
+    <pd:struct name="SimpleS" fill="parent">
         <pd:comment>This struct is super simple</pd:comment>
         <pd:fields>
             <pd:field name="int1" type="uint8" />

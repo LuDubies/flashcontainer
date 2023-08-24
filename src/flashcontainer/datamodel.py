@@ -39,7 +39,6 @@ from operator import attrgetter
 from dataclasses import dataclass
 from itertools import chain
 import json5
-from random import randbytes
 
 from flashcontainer.checksum import Crc, CrcConfig
 
@@ -372,17 +371,13 @@ class Field:
 class Datastruct:
     """ Class to hold struct type information """
 
-    def __init__(self, name: str, filloption: str,
-                  field_alignment: bool = True, struct_alignment: bool = True, stride_padding: bool = True) -> None:
+    def __init__(self, name: str, filloption: str) -> None:
         self.name = name
         self.fields = []
-        if filloption not in ("parent", "random"):
+        if filloption not in ("parent"):
             self.filloption = int(filloption) & 0xFF
         else:
             self.filloption = filloption
-        self.field_alignment = field_alignment
-        self.struct_alignment = struct_alignment
-        self.stride_padding = stride_padding
         self.comment = None
 
     def set_comment(self, comment: str) -> None:
@@ -403,32 +398,10 @@ class Datastruct:
         fieldbytes = Datastruct.field_bytes_from_json(ftypes, endianess, value_text)
 
         # construct full data array field by field
-        if self.struct_alignment:
-            # add padding so the first field (and the full struct) starts at an address aligned with its largest data type
-            biggest_field_size = max(sizes)
-            if current_addr % biggest_field_size != 0:
-                front_padding_size = biggest_field_size - (current_addr % biggest_field_size)
-                data.extend(self.get_padding(front_padding_size, blockfill))
-                current_addr += front_padding_size
-
         for fbytes in fieldbytes:
             fsize = len(fbytes)
-            if self.field_alignment:
-                # ensure every field is address aligned
-                if current_addr % fsize != 0:
-                    padding_size = fsize - (current_addr % fsize)
-                    data.extend(self.get_padding(padding_size, blockfill))
-                    current_addr += padding_size
             data.extend(fbytes)
             current_addr += fsize
-
-        if self.stride_padding:
-            # add padding behind the struct to fill until the next valid struct address
-            biggest_field_size = max(sizes)
-            if current_addr % biggest_field_size != 0:
-                stride_padding_size = biggest_field_size - (current_addr % biggest_field_size)
-                data.extend(self.get_padding(stride_padding_size, blockfill))
-                current_addr += stride_padding_size
 
         return data
 
@@ -447,9 +420,7 @@ class Datastruct:
 
     def get_padding(self, bytesize: int, blockfill: int) -> bytearray:
         """Returns either randomly or uniformly filled bytearray with bytesize bytes"""
-        if self.filloption == "random":
-            return bytearray(randbytes(bytesize))
-        elif self.filloption == "parent":
+        if self.filloption == "parent":
             return bytearray((blockfill for _ in range(bytesize)))
         else:
             return bytearray((self.filloption for _ in range(bytesize)))

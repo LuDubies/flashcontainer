@@ -280,12 +280,8 @@ class XmlParser:
                 name = element.get("name")
                 filloption = element.get("fill")
                 logging.info("Found struct with name %s and filloption %s!", name, filloption)
-                struct_align = XmlParser._parse_bool(XmlParser._get_optional(element, "struct_alignment", "True"))
-                field_align = XmlParser._parse_bool(XmlParser._get_optional(element, "field_alignment", "True"))
-                stride_pad = XmlParser._parse_bool(XmlParser._get_optional(element, "stride", "True"))
 
-                strct = DM.Datastruct(name, filloption, struct_alignment=struct_align,
-                                       field_alignment=field_align, stride_padding=stride_pad)
+                strct = DM.Datastruct(name, filloption)
                 XmlParser._build_struct(strct, element)
                 model.add_struct(strct)
 

@@ -66,16 +66,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             <xs:element name="fields" minOccurs="1" maxOccurs="1">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element name="field" type="pargen:field" minOccurs="1" maxOccurs="unbounded" />
+                        <xs:element name="field" type="pargen:field" minOccurs="0" maxOccurs="unbounded" />
+                        <xs:element name="arrayfield" type="pargen:arrayfield" minOccurs="0" maxOccurs="unbounded" />
+                        <xs:element name="padding" type="pargen:padding" minOccurs="0" maxOccurs="unbounded" />
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
         </xs:sequence>
         <xs:attribute name="name" type="pargen:identifier" use="required" />
         <xs:attribute name="fill" type="pargen:filloption" use="optional" default="parent"/>
-        <xs:attribute name="field_alignment" type="pargen:boolean" use="optional" default="True"/>
-        <xs:attribute name="struct_alignment" type="pargen:boolean" use="optional" default="True"/>
-        <xs:attribute name="stride" type="pargen:boolean" use="optional" default="True"/>
     </xs:complexType>
 
     <xs:complexType name="field">
@@ -84,6 +83,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         </xs:sequence>
         <xs:attribute name="name" type="pargen:identifier" use="required" />
         <xs:attribute name="type" type="pargen:type" use="required" />
+    </xs:complexType>
+
+    <xs:complexType name="arrayfield">
+        <xs:complexContent>
+            <xs:extension base="pargen:field">
+                <xs:attribute name="size" type="pargen:uint64" />
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="padding">
+        <xs:attribute name="size" type="pargen:uint64"></xs:attribute>
     </xs:complexType>
 
     <xs:complexType name="block">
@@ -189,7 +200,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     <xs:simpleType name="filloption">
         <xs:restriction base="xs:string">
-            <xs:pattern value="0x[0-9a-fA-F]{1,2}|0|[1-2][0-9]{0,2}|parent|random"></xs:pattern>
+            <xs:pattern value="0x[0-9a-fA-F]{1,2}|0|[1-2][0-9]{0,2}|parent"></xs:pattern>
         </xs:restriction>
     </xs:simpleType>
 
