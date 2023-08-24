@@ -73,6 +73,7 @@ class ByteConvert:
 
         return result
 
+    
     @staticmethod
     def bytes_to_c_init(ptype: DM.ParamType,  endianess: DM.Endianness, data: bytearray) -> str:
         """Convert raw data to C-Language initializer"""

@@ -40,7 +40,7 @@
                     <pd:crc offset="0xfc" name="crc" type="uint32">
                         <pd:comment>block crc32 (IEEE802.3)</pd:comment>
                         <pd:memory from="0x0000" to="."/>
-                        <pd:config  polynomial="0x04C11DB7" init="0xFFFFFFFF" rev_in="true" rev_out="true" final_xor="true"></pd:config>
+                        <pd:config polynomial="0x04C11DB7" init="0xFFFFFFFF" rev_in="true" rev_out="true" final_xor="true"></pd:config>
                     </pd:crc>
                 </pd:data>
             </pd:block>
@@ -68,6 +68,19 @@
                          <pd:comment>block crc32 (IEEE802.3)</pd:comment>
                          <pd:memory from="0x0000" to="."/>
                     </pd:crc>
+                </pd:data>
+            </pd:block>
+
+            <pd:block offset="0x1024" name="structTestBlock" length="0x200" endianness="LE" align="256" fill="0xFF">
+                <pd:comment>This block contains parameters that use structs</pd:comment>
+                <pd:header id="0x0E00" major="1" minor="0" version="0"/>
+                <pd:data>
+                    <pd:param offset="." name="simpy" type="complex" struct="SimpleS">
+                        <pd:value>[3, 5]</pd:value>
+                    </pd:param>
+                    <pd:param offset="0x100" name="biggy" type="complex" struct="ComplexS">
+                        <pd:value>[1, 99999999, 2]</pd:value>
+                    </pd:param>
                 </pd:data>
             </pd:block>
         </pd:blocks>

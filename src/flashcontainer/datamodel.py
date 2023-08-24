@@ -31,13 +31,15 @@
 #
 
 from enum import Enum
-from typing import Dict, NamedTuple, Optional
+from typing import Dict, NamedTuple, Optional, List
 import struct
 import logging
 from collections import namedtuple
 from operator import attrgetter
 from dataclasses import dataclass
 from itertools import chain
+import json5
+from random import randbytes
 
 from flashcontainer.checksum import Crc, CrcConfig
 
@@ -380,7 +382,7 @@ class Datastruct:
             self.filloption = filloption
         self.field_alignment = field_alignment
         self.struct_alignment = struct_alignment
-        self.stide_padding = stride_padding
+        self.stride_padding = stride_padding
         self.comment = None
 
     def set_comment(self, comment: str) -> None:
@@ -391,20 +393,69 @@ class Datastruct:
         """Add field to the data struct"""
         self.fields.append(field)
 
-    def get_size_at_address(self, address: int) -> int:
-        """Calculates the bytes the struct requires in memory with its alignment configuration.
-        This includes padding due to struct alignment, field alignment and stride"""
+    def init_parameter(self, value_text: str, offset: int, endianess: Endianness, blockfill: int) -> bytearray:
+        """Parse parameter value to data array for a struct parameter"""
+        data = bytearray()
+        current_addr = offset
+        # parse data for every field
+        ftypes = [f.type for f in self.fields]
+        sizes = [TYPE_DATA[ParamType(t.value)].size for t in ftypes]
+        fieldbytes = Datastruct.field_bytes_from_json(ftypes, endianess, value_text)
 
-        # consider struct alignment
+        # construct full data array field by field
+        if self.struct_alignment:
+            # add padding so the first field (and the full struct) starts at an address aligned with its largest data type
+            biggest_field_size = max(sizes)
+            if current_addr % biggest_field_size != 0:
+                front_padding_size = biggest_field_size - (current_addr % biggest_field_size)
+                data.extend(self.get_padding(front_padding_size, blockfill))
+                current_addr += front_padding_size
 
-        # then traverse fields
+        for fbytes in fieldbytes:
+            fsize = len(fbytes)
+            if self.field_alignment:
+                # ensure every field is address aligned
+                if current_addr % fsize != 0:
+                    padding_size = fsize - (current_addr % fsize)
+                    data.extend(self.get_padding(padding_size, blockfill))
+                    current_addr += padding_size
+            data.extend(fbytes)
+            current_addr += fsize
 
-        # then calc stride addr
-        return address
+        if self.stride_padding:
+            # add padding behind the struct to fill until the next valid struct address
+            biggest_field_size = max(sizes)
+            if current_addr % biggest_field_size != 0:
+                stride_padding_size = biggest_field_size - (current_addr % biggest_field_size)
+                data.extend(self.get_padding(stride_padding_size, blockfill))
+                current_addr += stride_padding_size
+
+        return data
+
+    @staticmethod
+    def field_bytes_from_json(typelist: List[BasicType], endianess: Endianness, value_str: str) -> List[bytearray]:
+        """Convert values in the value string to the respective types from the typelist"""
+        from_json = json5.loads(value_str)
+        if not isinstance(from_json, list) or len(from_json) != len(typelist):
+            raise Exception(f"Invalid input {value_str} for types {typelist=}")
+        values = []
+        for t, v in zip(typelist, from_json):
+            fmt = "<" if endianess == Endianness.LE else ">"
+            fmt += TYPE_DATA[ParamType(t.value)].fmt
+            values.append(bytearray(struct.pack(fmt, v)))
+        return values
+
+    def get_padding(self, bytesize: int, blockfill: int) -> bytearray:
+        """Returns either randomly or uniformly filled bytearray with bytesize bytes"""
+        if self.filloption == "random":
+            return bytearray(randbytes(bytesize))
+        elif self.filloption == "parent":
+            return bytearray((blockfill for _ in range(bytesize)))
+        else:
+            return bytearray((self.filloption for _ in range(bytesize)))
 
     def __str__(self) -> str:
         return f"{self.name} [{len(self.fields)} fields]"
-
 
 class Walker:
     """A data model walker class

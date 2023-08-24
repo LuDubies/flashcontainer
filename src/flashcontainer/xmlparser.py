@@ -32,7 +32,7 @@
 import logging
 import pathlib
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 import lxml.etree as ET
 
@@ -205,7 +205,7 @@ class XmlParser:
             end=end)
 
     @staticmethod
-    def _build_parameters(block: DM.Block, element) -> None:
+    def _build_parameters(block: DM.Block, element: ET.Element, structs: Optional[List[DM.Datastruct]] = None) -> None:
         data_element = element.find(f"{{{NS}}}data")
         running_addr = block.addr
         if block.header is not None:
@@ -232,9 +232,26 @@ class XmlParser:
                 value_element = parameter_element.find(f"{{{NS}}}value")
                 val_text = value_element.text
 
-            data = ByteConvert.json_to_bytes(ptype, block.endianess, val_text)
+            if ptype == DM.ParamType.COMPLEX:
+                # get the corresponding struct object
+                if structs is None:
+                    logging.critical("Parsing complex parameter with no structs defined")
+                    return None
+                sname = parameter_element.get("struct")
+                if sname is None:
+                    logging.critical("Parsing complex parameter with no struct attribute")
+                    return None
+                if sname not in [s.name for s in structs]:
+                    logging.critical("Parsing complex parameter with undefined struct name")
+                    return None
+                strct = [s for s in structs if s.name == sname][0]
 
-            parameter = DM.Parameter(offset, name, ptype, data, crc_cfg)
+                # call struct with all info
+                data = strct.init_parameter(val_text, offset, block.endianess, block.fill)
+                parameter = DM.Parameter(offset, name, ptype, data, crc_cfg, datastruct=strct)
+            else:
+                data = ByteConvert.json_to_bytes(ptype, block.endianess, val_text)
+                parameter = DM.Parameter(offset, name, ptype, data, crc_cfg)
 
             comment = parameter_element.find(f"{{{NS}}}comment")
             if comment is not None:
@@ -256,14 +273,14 @@ class XmlParser:
 
                 container = DM.Container(name, address)
                 logging.info("Loading container definition for %s", name)
-                XmlParser._build_blocks(container, element)
+                XmlParser._build_blocks(container, element, structs=model.datastructs)
 
                 model.add_container(container)
             elif element.tag == f"{{{NS}}}struct":
                 name = element.get("name")
                 filloption = element.get("fill")
                 logging.info("Found struct with name %s and filloption %s!", name, filloption)
-                struct_align =XmlParser._parse_bool(XmlParser._get_optional(element, "struct_alignment", "True"))
+                struct_align = XmlParser._parse_bool(XmlParser._get_optional(element, "struct_alignment", "True"))
                 field_align = XmlParser._parse_bool(XmlParser._get_optional(element, "field_alignment", "True"))
                 stride_pad = XmlParser._parse_bool(XmlParser._get_optional(element, "stride", "True"))
 
@@ -302,7 +319,7 @@ class XmlParser:
         return result_addr
 
     @staticmethod
-    def _build_blocks(container: DM.Container, xml_element: ET.Element) -> None:
+    def _build_blocks(container: DM.Container, xml_element: ET.Element, structs: Optional[List[DM.Datastruct]] = None) -> None:
         """ Load block list for given container """
 
         running_addr = container.addr
@@ -336,7 +353,7 @@ class XmlParser:
                 )
                 block.set_header(DM.BlockHeader(block_id, version))
 
-            XmlParser._build_parameters(block, element)
+            XmlParser._build_parameters(block, element, structs=structs)
 
             block.fill_gaps()
             block.update_crcs()
