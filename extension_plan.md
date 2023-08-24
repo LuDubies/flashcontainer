@@ -33,11 +33,10 @@ The newly introduced data structure "struct" has to cover these functionalities
 
 * Include one or multiple fields of basic types
 * hold information to reference the struct
+* Include arrays of fixed size in the struct
+* Include padding elements to align fields of the struct
 * enable translation into a C-type struct
 * enable translation into pyHexdump config
-* adjustable self-alignment
-* adjustable struct-alignment
-* adjustable stride-address
 
 ## Implementation Details
 
@@ -50,6 +49,9 @@ The overall XML structure will be extended to feature struct elements that are d
             <pd:fields>
                 <pd:field>
                 ...
+                <pd:arrayfield>
+                ...
+                <pd:padding>
             </pd:fields>
         </pd:struct>
         <pd:container>
@@ -72,34 +74,39 @@ the parameters type will be interpreted as the struct. A struct features multipl
 |------------------|------------------------------|--------|---------|
 | name             | The structs name.            |   No   |         |
 | fill             | Byte value used for padding  |   Yes  |  parent |
-| field_alignment  | Apply field alignment        |   Yes  |   True  |
-| struct_alignment | Apply struct alignment       |   Yes  |   True  |
-| stride           | Apply stride buffer          |   Yes  |   True  |
 
-Field alignment will ensure that the data of the structs fields is self aligned **relative to the structs address**.
-This means that 2 byte data types can only start at 2 byte offsets to the struct address (4 byte types at 4 byte offsets, ...).
-Struct alignment will apply a similar constraint to the starting address of the struct. Here the valid addresses are constrained by the size of the biggest field in the struct.
-A struct encompassing a uint64 field can only start at addresses divisible by 8 for example.
-Application of field and struct alignment will ensure pargen structs feature the same memory layout as C-structs.
-Additionally, the stride parameter will result in additional padding up to the structs stride address (the address where the next struct of the same type could start in memory).
-Struct parameters will start at the next valid address from their offset.
 
-The fill value will be used as padding, with the additional options of "parent" and "random".
-Choosing **parent** will use the fill value of a parameters encompassing block, the **random** option will randomly fill the padding bytes.
-
-The total memory footprint / size of the struct is highly dependent on the chosen alignment options, as they might result in padding bytes between and after the fields of the struct.
-While most compilers for almost all instruction sets and architectures will feature self alignment of C-structs, the options can also be switched of to result in densely packed data in memory.
+The fill value will be used as padding, with the additional options of "parent".
+Choosing **parent** will use the fill value of a parameters encompassing block.
 
 ### The Field Element
 
 A field is the basic building block of a struct and serves as a placeholder for a value of a basic type in instances of the struct.
-Unlike parameter elements in a block, a field does not hold offset or alignment information, as the alignment strategy is set by the encompassing structs attributes.
+Unlike parameter elements in a block, a field does not hold offset or alignment information, instead alignment is handled by padding tags.
 The basic type of the field defines its size and content interpretation.
 
 |Attribute         |Description                   |optional| default |
 |------------------|------------------------------|--------|---------|
 | name             | The fields name.             |   No   |         |
 | type             | Basic type of the field      |   No   |         |
+
+
+### The Array Field Element
+
+Array Fields are similar to fields, but feature a size attribute that determines the resulting arrays size
+
+|Attribute         |Description                   |optional| default |
+|------------------|------------------------------|--------|---------|
+| name             | The fields name.             |   No   |         |
+| type             | Basic type of the field      |   No   |         |
+| size             | Size of the array            |   No   |         |
+
+### The Padding Element
+
+The padding element is used to introduce gaps / offsets between a structs fields. It features a size attribute that determines the padding size.
+|Attribute         |Description                   |optional| default |
+|------------------|------------------------------|--------|---------|
+| size             | Size of the array            |   No   |         |
 
 
 ### Appendix To Parameter Element
@@ -111,11 +118,18 @@ Added the struct attribute to the parameter element, designating the struct to u
 | struct           | Struct of the parameter      |   Yes  |    ""   |
 
 ## Additional Notes
-
 Additional changes that might be needed for integrating the new feature:
 
 * Adjust pargen XSD version numbering (old XML will stay valid, but new features deserve at least a new minor version)
-* Do structs ever need more stric alignment than their struct alignment? That would require an extra option.
+* Introduce JSON syntax for supplying parameters with values
+* Introduce strict array size limits for standard parameters also????
+* IMPORTANT: introduce includes for structs into xml syntax
+
+
+## Additional Feature Ideas
+
+* Random padding bytes
+* C-struct like alignment
 
 
 ## Review
