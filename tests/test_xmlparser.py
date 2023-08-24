@@ -100,8 +100,24 @@ def test_modify_value():
     sandbox_dir = pathlib.Path(__file__).resolve().parents[1]
     safety_xml = pathlib.Path.joinpath(sandbox_dir, "examples", "safety", "safety.xml")
     model = XP.XmlParser.from_file(safety_xml, {"calibration":"[0,1,3,4,5,6,7,8,9,10]"})
-    assert model.validate(None) == True
+    assert model.validate(None) is True
     print(model.container[0].blocks[0].parameter[0].value)
     assert model.container[0].blocks[0].parameter[0].value == b'\x00\x00\x00\x00\x00\x00\x80?\x00\x00@@\x00\x00\x80@\x00\x00\xa0@\x00\x00\xc0@\x00\x00\xe0@\x00\x00\x00A\x00\x00\x10A\x00\x00 A'
 
+def test_parse_structs():
+    """ Test for the correct parsing of xml defined structs """
+    sandbox_dir = pathlib.Path(__file__).resolve().parent
+    test_xml = pathlib.Path.joinpath(sandbox_dir, "example", "structexample.xml")
+    model = XP.XmlParser.from_file(test_xml)
+    assert model.validate(None) is True
+
+    assert len(model.datastructs) == 2
+    assert len(model.datastructs[0].fields) == 2
+    assert "super simple" in model.datastructs[0].comment
+    assert len(model.datastructs[1].fields) == 3
+    assert "much padding" in model.get_struct_by_name("ComplexS").fields[1].comment
+    assert model.get_struct_by_name("idonotexist") is None
+
+    assert model.datastructs[0].struct_alignment is False
+    assert model.datastructs[0].field_alignment is True
     

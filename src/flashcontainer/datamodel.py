@@ -31,7 +31,7 @@
 #
 
 from enum import Enum
-from typing import Dict, NamedTuple, Union
+from typing import Dict, NamedTuple, Optional
 import struct
 import logging
 from collections import namedtuple
@@ -235,8 +235,6 @@ class Block:
         return f"Block({self.name} @ {hex(self.addr)})"
 
 
-
-
 class BasicType(Enum):
     """Supported basic data types"""
     UINT32 = 1
@@ -334,6 +332,11 @@ class Model:
         """Append data struct to model"""
         self.datastructs.append(strct)
 
+    def get_struct_by_name(self, name: str) -> Optional["Datastruct"]:
+        """Resturns the struct with the given name if one is present"""
+        candidates = [s for s in self.datastructs if s.name == name]
+        return candidates[0] if candidates else None
+
     def __str__(self):
         return f"Model({self.name} {self.container})"
 
@@ -364,12 +367,12 @@ class Field:
 class Datastruct:
     """ Class to hold struct type information """
 
-    def __init__(self, name: str, filloption: Union[int, str],
-                  field_alignment = True, struct_alignment = True, stride_padding = True) -> None:
+    def __init__(self, name: str, filloption: str,
+                  field_alignment: bool = True, struct_alignment: bool = True, stride_padding: bool = True) -> None:
         self.name = name
         self.fields = []
-        if isinstance(filloption, int):
-            self.filloption = filloption & 0xFF
+        if filloption not in ("parent", "random"):
+            self.filloption = int(filloption) & 0xFF
         else:
             self.filloption = filloption
         self.field_alignment = field_alignment

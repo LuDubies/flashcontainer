@@ -250,7 +250,7 @@ class XmlParser:
 
         # iterate over structs and containers
         for element in root:
-            if 'container' in element.tag:
+            if element.tag == f"{{{NS}}}container":
                 address = XmlParser._parse_int(element.get("at"))
                 name = element.get("name")
 
@@ -259,10 +259,18 @@ class XmlParser:
                 XmlParser._build_blocks(container, element)
 
                 model.add_container(container)
-            elif 'struct' in element.tag:
+            elif element.tag == f"{{{NS}}}struct":
                 name = element.get("name")
                 filloption = element.get("fill")
                 logging.info("Found struct with name %s and filloption %s!", name, filloption)
+                struct_align =XmlParser._parse_bool(XmlParser._get_optional(element, "struct_alignment", "True"))
+                field_align = XmlParser._parse_bool(XmlParser._get_optional(element, "field_alignment", "True"))
+                stride_pad = XmlParser._parse_bool(XmlParser._get_optional(element, "stride", "True"))
+
+                strct = DM.Datastruct(name, filloption, struct_alignment=struct_align,
+                                       field_alignment=field_align, stride_padding=stride_pad)
+                XmlParser._build_struct(strct, element)
+                model.add_struct(strct)
 
         return model
 
@@ -335,3 +343,21 @@ class XmlParser:
             container.add_block(block)
 
             running_addr += length
+
+    @staticmethod
+    def _build_struct(strct: DM.Datastruct, xml_element: ET.Element) -> None:
+        """ Parse the fields of a data structure"""
+        strct_comment = xml_element.find(f"{{{NS}}}comment")
+        if strct_comment is not None:
+            strct.set_comment(strct_comment.text)
+
+        fields_element = xml_element.find(f"{{{NS}}}fields")
+        for element in fields_element:
+            name = element.get("name")
+            btype = DM.BasicType[element.get("type").upper()]
+            comment = None
+            field_comment = element.find(f"{{{NS}}}comment")
+            if field_comment is not None:
+                comment = field_comment.text
+            field = DM.Field(name, btype, comment=comment)
+            strct.add_field(field)
