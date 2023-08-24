@@ -65,11 +65,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
             <xs:element name="comment" type="pargen:textonly" minOccurs="0" maxOccurs="1"></xs:element>
             <xs:element name="fields" minOccurs="1" maxOccurs="1">
                 <xs:complexType>
-                    <xs:sequence>
-                        <xs:element name="field" type="pargen:field" minOccurs="0" maxOccurs="unbounded" />
-                        <xs:element name="arrayfield" type="pargen:arrayfield" minOccurs="0" maxOccurs="unbounded" />
-                        <xs:element name="padding" type="pargen:padding" minOccurs="0" maxOccurs="unbounded" />
-                    </xs:sequence>
+                    <xs:choice minOccurs="1" maxOccurs="unbounded">
+                        <xs:element name="field" type="pargen:field"/>
+                        <xs:element name="arrayfield" type="pargen:arrayfield"/>
+                        <xs:element name="padding" type="pargen:padding"/>
+                    </xs:choice>
                 </xs:complexType>
             </xs:element>
         </xs:sequence>

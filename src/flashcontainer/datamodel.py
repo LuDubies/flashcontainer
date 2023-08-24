@@ -422,8 +422,7 @@ class Datastruct:
         """Returns either randomly or uniformly filled bytearray with bytesize bytes"""
         if self.filloption == "parent":
             return bytearray((blockfill for _ in range(bytesize)))
-        else:
-            return bytearray((self.filloption for _ in range(bytesize)))
+        return bytearray((self.filloption for _ in range(bytesize)))
 
     def __str__(self) -> str:
         return f"{self.name} [{len(self.fields)} fields]"
