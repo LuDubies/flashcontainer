@@ -363,6 +363,9 @@ class Field:
         """Returns the size of the basic type and therefore the field"""
         return TYPE_DATA[ParamType(self.type.value)].size
 
+    def __str__(self) -> str:
+        return f"{self.name} of type {self.type}"
+
 
 class Datastruct:
     """ Class to hold struct type information """
@@ -398,6 +401,9 @@ class Datastruct:
 
         # then calc stride addr
         return address
+
+    def __str__(self) -> str:
+        return f"{self.name} [{len(self.fields)} fields]"
 
 
 class Walker:
@@ -437,21 +443,43 @@ class Walker:
         """Run actions when leaving block """
 
     def begin_parameter(self, param: Parameter) -> None:
-        """ Run begin actions for parameter"""
+        """Run begin actions for parameter"""
 
     def end_parameter(self, param: Parameter) -> None:
-        """ Run end actions for parameter"""
+        """Run end actions for parameter"""
 
     def begin_gap(self, param: Parameter) -> None:
-        """ Run begin actions for gaps"""
+        """Run begin actions for gaps"""
 
     def end_gap(self, param: Parameter) -> None:
-        """ Run end actions for gaps"""
+        """Run end actions for gaps"""
+
+    def begin_struct(self, strct: Datastruct) -> None:
+        """Run begin action for structs"""
+
+    def end_struct(self, strct: Datastruct) -> None:
+        """Run end action for structs"""
+
+    def begin_field(self, field: Field) -> None:
+        """Run begin action for fields"""
+
+    def end_field(self, field: Field) -> None:
+        """Run end action for fields"""
 
     def run(self):
         """Walk the data model."""
 
         self.pre_run()
+
+        for strct in self.model.datastructs:
+            logging.debug("begin_struct(%s)", strct)
+            self.begin_struct(strct)
+
+            for field in strct.fields:
+                self.begin_field(field)
+                self.end_field(field)
+
+            self.end_struct(strct)
 
         for container in self.model.container:
             self.ctx_container = container
@@ -497,31 +525,45 @@ class Validator(Walker):
         super().__init__(model, options)
         self.result = True
         self.last_param = None
-        self.blocklist = {}
-        self.paramlist = {}
+        self.blockdict = {}
+        self.paramdict = {}
+        self.structdict = {}
+        self.fielddict = {}
+
 
     def begin_container(self, container: Container) -> None:
-        self.blocklist = {}
+        self.blockdict = {}
+
+    def begin_struct(self, strct: Datastruct) -> None:
+        if strct.name in self.structdict:
+            self.error(f"struct {strct.name} defined more than once in the model")
+        self.structdict.update({strct.name: strct})
+        self.fielddict = {}
+
+    def begin_field(self, field: Field) -> None:
+        if field.name in self.fielddict:
+            self.error(f"field {field.name} defined more than once in the same struct")
+        self.fielddict[field.name] = field
 
     def begin_block(self, block: Block):
         self.last_param = None
-        self.paramlist = {}
+        self.paramdict = {}
 
-        if block.name in self.blocklist:
+        if block.name in self.blockdict:
             self.error(
                 f"block with name {block.name} already exists "
-                f"@ 0x{self.blocklist[block.name].addr:08X}")
+                f"@ 0x{self.blockdict[block.name].addr:08X}")
         else:
-            self.blocklist[block.name] = block
+            self.blockdict[block.name] = block
 
     def begin_parameter(self, param: Parameter):
 
-        if param.name in self.paramlist:
+        if param.name in self.paramdict:
             self.error(
                 f"parameter with name {param.name} already exists "
-                f"@ 0x{self.paramlist[param.name].offset:08X}")
+                f"@ 0x{self.paramdict[param.name].offset:08X}")
         else:
-            self.paramlist[param.name] = param
+            self.paramdict[param.name] = param
 
         block_end = self.ctx_block.addr + self.ctx_block.length
 
