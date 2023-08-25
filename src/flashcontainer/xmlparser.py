@@ -206,12 +206,11 @@ class XmlParser:
 
     @staticmethod
     def _build_parameters(block: DM.Block, element: ET.Element, structs: Optional[List[DM.Datastruct]] = None) -> None:
-        data_element = element.find(f"{{{NS}}}data")
         running_addr = block.addr
         if block.header is not None:
             running_addr += len(block.get_header_bytes())
 
-        for parameter_element in data_element:
+        for parameter_element in element.find(f"{{{NS}}}data"):
 
             offset = XmlParser.calc_addr(
                 block.addr,
@@ -236,14 +235,14 @@ class XmlParser:
                 # get the corresponding struct object
                 if structs is None:
                     logging.critical("Parsing complex parameter with no structs defined")
-                    return None
+                    return
                 sname = parameter_element.get("struct")
                 if sname is None:
                     logging.critical("Parsing complex parameter with no struct attribute")
-                    return None
+                    return
                 if sname not in [s.name for s in structs]:
                     logging.critical("Parsing complex parameter with undefined struct name")
-                    return None
+                    return
                 strct = [s for s in structs if s.name == sname][0]
 
                 data = ByteConvert.fill_struct_from_json(strct, val_text, block.endianess, block.fill)
@@ -319,12 +318,10 @@ class XmlParser:
         """ Load block list for given container """
 
         running_addr = container.addr
-        blocks_element = xml_element.find(f"{{{NS}}}blocks")
 
-        for element in blocks_element:
-            align = XmlParser.get_alignment(element)
+        for element in xml_element.find(f"{{{NS}}}blocks"):
             block_addr = XmlParser.calc_addr(
-                container.addr, running_addr, element.get("offset"), align)
+                container.addr, running_addr, element.get("offset"), XmlParser.get_alignment(element))
             name = element.get("name")
             length = XmlParser._parse_int(element.get("length"))
 
@@ -366,7 +363,7 @@ class XmlParser:
 
         fields_element = xml_element.find(f"{{{NS}}}fields")
         for element in fields_element:
-            if element.tag == f"{{{NS}}}field" or element.tag == f"{{{NS}}}arrayfield":
+            if element.tag in (f"{{{NS}}}field", f"{{{NS}}}arrayfield"):
                 name = element.get("name")
                 btype = DM.BasicType[element.get("type").upper()]
                 comment = None
