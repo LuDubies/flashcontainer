@@ -359,7 +359,7 @@ class StructElement(ABC):
     @abstractmethod
     def get_size(self) -> int:
         """Returns the size of the element in the struct"""
-        
+
 
 @dataclass
 class Field(StructElement):
