@@ -233,16 +233,13 @@ class XmlParser:
 
             if ptype == DM.ParamType.COMPLEX:
                 # get the corresponding struct object
-                if structs is None:
-                    logging.critical("Parsing complex parameter with no structs defined")
-                    return
                 sname = parameter_element.get("struct")
                 if sname is None:
                     logging.critical("Parsing complex parameter with no struct attribute")
-                    return
-                if sname not in [s.name for s in structs]:
+                    raise ET.DocumentInvalid("Parsing complex parameter with no struct attribute")
+                if structs is None or sname not in [s.name for s in structs]:
                     logging.critical("Parsing complex parameter with undefined struct name")
-                    return
+                    raise ET.DocumentInvalid("Parsing complex parameter with undefined struct name")
                 strct = [s for s in structs if s.name == sname][0]
 
                 data = ByteConvert.fill_struct_from_json(strct, val_text, block.endianess, block.fill)

@@ -99,7 +99,7 @@ def test_parse_safety_example():
 def test_modify_value():
     sandbox_dir = pathlib.Path(__file__).resolve().parents[1]
     safety_xml = pathlib.Path.joinpath(sandbox_dir, "examples", "safety", "safety.xml")
-    model = XP.XmlParser.from_file(safety_xml, {"calibration":"[0,1,3,4,5,6,7,8,9,10]"})
+    model = XP.XmlParser.from_file(safety_xml, {"calibration":"[0,1,3,4,5,6,7,8,9,10]", "idontexist": 3})
     assert model.validate(None) is True
     print(model.container[0].blocks[0].parameter[0].value)
     assert model.container[0].blocks[0].parameter[0].value == b'\x00\x00\x00\x00\x00\x00\x80?\x00\x00@@\x00\x00\x80@\x00\x00\xa0@\x00\x00\xc0@\x00\x00\xe0@\x00\x00\x00A\x00\x00\x10A\x00\x00 A'

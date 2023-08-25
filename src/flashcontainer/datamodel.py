@@ -359,11 +359,7 @@ class StructElement(ABC):
     @abstractmethod
     def get_size(self) -> int:
         """Returns the size of the element in the struct"""
-
-    @abstractmethod
-    def __str__(self) -> str:
-        """Returns a string representation of the emelent"""
-
+        
 
 @dataclass
 class Field(StructElement):
@@ -378,9 +374,6 @@ class Field(StructElement):
     def get_size(self) -> int:
         """Returns the size of the basic type and therefore the field"""
         return TYPE_DATA[self.type].size
-
-    def __str__(self) -> str:
-        return f"Field {self.name} of type {self.type} (size {self.get_size()})"
 
 
 @dataclass
@@ -397,9 +390,6 @@ class ArrayField(StructElement):
     def get_size(self) -> int:
         return TYPE_DATA[self.type].size * self.count
 
-    def __str__(self) -> str:
-        return f"Array {self.name} of type {self.type} (size {self.get_size()})"
-
 
 @dataclass
 class Padding(StructElement):
@@ -408,9 +398,6 @@ class Padding(StructElement):
 
     def get_size(self) -> int:
         return self.size
-
-    def __str__(self) -> str:
-        return f"{self.get_size()} bytes of padding"
 
 
 class Datastruct:
@@ -443,6 +430,10 @@ class Datastruct:
     def get_field_names(self) -> List[str]:
         """Returns a list of all named fields names in the struct"""
         return [f.name for f in self.fields if isinstance(f, (Field, ArrayField))]
+
+    def __str__(self) -> str:
+        """Return a string representation of the struct"""
+        return f"{self.name} ({self.get_size()} bytes)"
 
 
 class Walker:
