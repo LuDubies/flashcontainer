@@ -233,8 +233,6 @@ class XmlParser:
                 val_text = value_element.text
 
             if ptype == DM.ParamType.COMPLEX:
-                continue
-                '''
                 # get the corresponding struct object
                 if structs is None:
                     logging.critical("Parsing complex parameter with no structs defined")
@@ -248,14 +246,10 @@ class XmlParser:
                     return None
                 strct = [s for s in structs if s.name == sname][0]
 
-                # call struct with all info
-                
-                data = strct.init_parameter(val_text, offset, block.endianess, block.fill)
-                parameter = DM.Parameter(offset, name, ptype, data, crc_cfg, datastruct=strct)
-                '''
+                data = ByteConvert.fill_struct_from_json(strct, val_text, block.endianess, block.fill)
             else:
                 data = ByteConvert.json_to_bytes(ptype, block.endianess, val_text)
-                parameter = DM.Parameter(offset, name, ptype, data, crc_cfg)
+            parameter = DM.Parameter(offset, name, ptype, data, crc_cfg)
 
             comment = parameter_element.find(f"{{{NS}}}comment")
             if comment is not None:

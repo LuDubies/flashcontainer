@@ -111,10 +111,22 @@ def test_parse_structs():
     model = XP.XmlParser.from_file(test_xml)
     assert model.validate(None) is True
 
+    # check parsing of struct tags
     assert len(model.datastructs) == 2
     assert len(model.datastructs[0].fields) == 2
     assert "super simple" in model.datastructs[0].comment
     assert len(model.datastructs[1].fields) == 5
     assert "space" in model.get_struct_by_name("ComplexS").fields[2].comment
     assert model.get_struct_by_name("idonotexist") is None
-    
+
+    # check parsing of complex parameters
+    assert model.container[0].blocks[2].addr == 0x80000400
+    params = model.container[0].blocks[2].parameter
+    assert params[0].name == "simpy"
+    assert params[0].offset == model.container[0].blocks[2].addr + 0x10
+    assert params[0].value == b'\x03\x05'
+
+    assert params[1].name == "biggy"
+    assert params[1].offset == params[0].offset + 2
+    assert params[1].value == b'\x01\xFF\xFF\xFF\xFF\x7F\x96\x98\x00\x00\x00\x00\x00' + \
+                                b'\xFF\xFF\x01\x00\x04\x00\x10\x00\x40\x00'

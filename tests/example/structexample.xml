@@ -73,15 +73,15 @@
                 </pd:data>
             </pd:block>
 
-            <pd:block offset="0x1024" name="structTestBlock" length="0x200" endianness="LE" align="256" fill="0xFF">
+            <pd:block offset="0x400" name="structTestBlock" length="0x200" endianness="LE" align="256" fill="0xFF">
                 <pd:comment>This block contains parameters that use structs</pd:comment>
                 <pd:header id="0x0E00" major="1" minor="0" version="0"/>
                 <pd:data>
                     <pd:param offset="." name="simpy" type="complex" struct="SimpleS">
-                        <pd:value>[3, 5]</pd:value>
+                        <pd:value>{ "int1": 3, "int2": 5}</pd:value>
                     </pd:param>
-                    <pd:param offset="0x100" name="biggy" type="complex" struct="ComplexS">
-                        <pd:value>[1, 99999999, 2]</pd:value>
+                    <pd:param offset="." name="biggy" type="complex" struct="ComplexS">
+                        <pd:value>{"int1": 1, "int2": 9999999, "intarray": [1, 4, 16, 64]}</pd:value>
                     </pd:param>
                 </pd:data>
             </pd:block>

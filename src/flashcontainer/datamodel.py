@@ -31,7 +31,7 @@
 #
 
 from enum import Enum
-from typing import Dict, NamedTuple, Optional
+from typing import Dict, NamedTuple, Optional, List
 import struct
 import logging
 from collections import namedtuple
@@ -436,6 +436,10 @@ class Datastruct:
     def get_size(self) -> int:
         """Returns the size of all struct components combined"""
         return sum((f.get_size() for f in self.fields))
+
+    def get_field_names(self) -> List[str]:
+        """Returns a list of all named fields names in the struct"""
+        return [f.name for f in self.fields if isinstance(f, (Field, ArrayField))]
 
 
 class Walker:
