@@ -130,3 +130,10 @@ def test_parse_structs():
     assert params[1].offset == params[0].offset + 2
     assert params[1].value == b'\x01\xFF\xFF\xFF\xFF\x7F\x96\x98\x00\x00\x00\x00\x00' + \
                                 b'\xFF\xFF\x01\x00\x04\x00\x10\x00\x40\x00'
+
+def test_parse_invalid_structs():
+    """Test invalid struct definitions or parameter values"""
+    sandbox_dir = pathlib.Path(__file__).resolve().parent
+    garbage_dir = pathlib.Path.joinpath(sandbox_dir, "collateral", "garbage")
+    for invalid_xml in garbage_dir.iterdir():
+        assert XP.XmlParser.from_file(invalid_xml) is None

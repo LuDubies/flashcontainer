@@ -420,7 +420,10 @@ class Datastruct:
         self.name = name
         self.fields = []
         if filloption not in ("parent"):
-            self.filloption = int(filloption) & 0xFF
+            try:
+                self.filloption = int(filloption) & 0xFF
+            except ValueError:
+                self.filloption = int(filloption, 16) & 0xFF
         else:
             self.filloption = filloption
         self.comment = None
