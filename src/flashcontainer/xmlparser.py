@@ -233,6 +233,8 @@ class XmlParser:
                 val_text = value_element.text
 
             if ptype == DM.ParamType.COMPLEX:
+                continue
+                '''
                 # get the corresponding struct object
                 if structs is None:
                     logging.critical("Parsing complex parameter with no structs defined")
@@ -247,8 +249,10 @@ class XmlParser:
                 strct = [s for s in structs if s.name == sname][0]
 
                 # call struct with all info
+                
                 data = strct.init_parameter(val_text, offset, block.endianess, block.fill)
                 parameter = DM.Parameter(offset, name, ptype, data, crc_cfg, datastruct=strct)
+                '''
             else:
                 data = ByteConvert.json_to_bytes(ptype, block.endianess, val_text)
                 parameter = DM.Parameter(offset, name, ptype, data, crc_cfg)
@@ -315,7 +319,9 @@ class XmlParser:
         return result_addr
 
     @staticmethod
-    def _build_blocks(container: DM.Container, xml_element: ET.Element, structs: Optional[List[DM.Datastruct]] = None) -> None:
+    def _build_blocks(container: DM.Container,
+                        xml_element: ET.Element,
+                        structs: Optional[List[DM.Datastruct]] = None) -> None:
         """ Load block list for given container """
 
         running_addr = container.addr
@@ -366,11 +372,21 @@ class XmlParser:
 
         fields_element = xml_element.find(f"{{{NS}}}fields")
         for element in fields_element:
-            name = element.get("name")
-            btype = DM.BasicType[element.get("type").upper()]
-            comment = None
-            field_comment = element.find(f"{{{NS}}}comment")
-            if field_comment is not None:
-                comment = field_comment.text
-            field = DM.Field(name, btype, comment=comment)
-            strct.add_field(field)
+            if element.tag == f"{{{NS}}}field" or element.tag == f"{{{NS}}}arrayfield":
+                name = element.get("name")
+                btype = DM.BasicType[element.get("type").upper()]
+                comment = None
+                field_comment = element.find(f"{{{NS}}}comment")
+                if field_comment is not None:
+                    comment = field_comment.text
+                if element.tag == f"{{{NS}}}arrayfield":
+                    count = XmlParser._parse_int(element.get("size"))
+                    afield = DM.ArrayField(name, btype, count, comment=comment)
+                    strct.add_field(afield)
+                else:
+                    field = DM.Field(name, btype, comment=comment)
+                    strct.add_field(field)
+            elif element.tag == f"{{{NS}}}padding":
+                size = XmlParser._parse_int(element.get("size"))
+                pad = DM.Padding(size)
+                strct.add_field(pad)

@@ -114,7 +114,7 @@ def test_parse_structs():
     assert len(model.datastructs) == 2
     assert len(model.datastructs[0].fields) == 2
     assert "super simple" in model.datastructs[0].comment
-    assert len(model.datastructs[1].fields) == 3
-    assert "much padding" in model.get_struct_by_name("ComplexS").fields[1].comment
+    assert len(model.datastructs[1].fields) == 5
+    assert "space" in model.get_struct_by_name("ComplexS").fields[2].comment
     assert model.get_struct_by_name("idonotexist") is None
     

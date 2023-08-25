@@ -31,14 +31,14 @@
 #
 
 from enum import Enum
-from typing import Dict, NamedTuple, Optional, List
+from typing import Dict, NamedTuple, Optional
 import struct
 import logging
 from collections import namedtuple
 from operator import attrgetter
 from dataclasses import dataclass
 from itertools import chain
-import json5
+from abc import ABC, abstractmethod
 
 from flashcontainer.checksum import Crc, CrcConfig
 
@@ -294,9 +294,8 @@ class Parameter:
         if self.datastruct is None:
             return f"{self.name} @ {hex(self.offset)} = {self.value.hex()} "\
                 f"len={len(self.value)}({hex(len(self.value))}) /* {self.comment } */"
-        else:
-            return f"{self.name} @ {hex(self.offset)} of type {self.datastruct} "\
-                f"/* {self.comment } */"
+        return f"{self.name} @ {hex(self.offset)} of type {self.datastruct} "\
+            f"/* {self.comment } */"
 
 
 class Container:
@@ -354,18 +353,64 @@ class Model:
 
 
 @dataclass
-class Field:
-    """ Field in a struct """
+class StructElement(ABC):
+    """Base class for the components in a struct"""
+
+    @abstractmethod
+    def get_size(self) -> int:
+        """Returns the size of the element in the struct"""
+
+    @abstractmethod
+    def __str__(self) -> str:
+        """Returns a string representation of the emelent"""
+
+
+@dataclass
+class Field(StructElement):
+    """Field in a struct"""
     name: str
     type: BasicType
     comment: str = None
 
+    def __post_init__(self):
+        self.type = ParamType(self.type.value)
+
     def get_size(self) -> int:
         """Returns the size of the basic type and therefore the field"""
-        return TYPE_DATA[ParamType(self.type.value)].size
+        return TYPE_DATA[self.type].size
 
     def __str__(self) -> str:
-        return f"{self.name} of type {self.type}"
+        return f"Field {self.name} of type {self.type} (size {self.get_size()})"
+
+
+@dataclass
+class ArrayField(StructElement):
+    """Field that holds multiple values of the same type"""
+    name: str
+    type: BasicType
+    count: int
+    comment: str = None
+
+    def __post_init__(self):
+        self.type = ParamType(self.type.value)
+
+    def get_size(self) -> int:
+        return TYPE_DATA[self.type].size * self.count
+
+    def __str__(self) -> str:
+        return f"Array {self.name} of type {self.type} (size {self.get_size()})"
+
+
+@dataclass
+class Padding(StructElement):
+    """Padding element to create gaps between Fields"""
+    size: int
+
+    def get_size(self) -> int:
+        return self.size
+
+    def __str__(self) -> str:
+        return f"{self.get_size()} bytes of padding"
 
 
 class Datastruct:
@@ -384,48 +429,14 @@ class Datastruct:
         """Set optional comment"""
         self.comment = comment
 
-    def add_field(self, field: Field) -> None:
+    def add_field(self, field: StructElement) -> None:
         """Add field to the data struct"""
         self.fields.append(field)
 
-    def init_parameter(self, value_text: str, offset: int, endianess: Endianness, blockfill: int) -> bytearray:
-        """Parse parameter value to data array for a struct parameter"""
-        data = bytearray()
-        current_addr = offset
-        # parse data for every field
-        ftypes = [f.type for f in self.fields]
-        sizes = [TYPE_DATA[ParamType(t.value)].size for t in ftypes]
-        fieldbytes = Datastruct.field_bytes_from_json(ftypes, endianess, value_text)
+    def get_size(self) -> int:
+        """Returns the size of all struct components combined"""
+        return sum((f.get_size() for f in self.fields))
 
-        # construct full data array field by field
-        for fbytes in fieldbytes:
-            fsize = len(fbytes)
-            data.extend(fbytes)
-            current_addr += fsize
-
-        return data
-
-    @staticmethod
-    def field_bytes_from_json(typelist: List[BasicType], endianess: Endianness, value_str: str) -> List[bytearray]:
-        """Convert values in the value string to the respective types from the typelist"""
-        from_json = json5.loads(value_str)
-        if not isinstance(from_json, list) or len(from_json) != len(typelist):
-            raise Exception(f"Invalid input {value_str} for types {typelist=}")
-        values = []
-        for t, v in zip(typelist, from_json):
-            fmt = "<" if endianess == Endianness.LE else ">"
-            fmt += TYPE_DATA[ParamType(t.value)].fmt
-            values.append(bytearray(struct.pack(fmt, v)))
-        return values
-
-    def get_padding(self, bytesize: int, blockfill: int) -> bytearray:
-        """Returns either randomly or uniformly filled bytearray with bytesize bytes"""
-        if self.filloption == "parent":
-            return bytearray((blockfill for _ in range(bytesize)))
-        return bytearray((self.filloption for _ in range(bytesize)))
-
-    def __str__(self) -> str:
-        return f"{self.name} [{len(self.fields)} fields]"
 
 class Walker:
     """A data model walker class
@@ -561,10 +572,11 @@ class Validator(Walker):
         self.structdict.update({strct.name: strct})
         self.fielddict = {}
 
-    def begin_field(self, field: Field) -> None:
-        if field.name in self.fielddict:
-            self.error(f"field {field.name} defined more than once in the same struct")
-        self.fielddict[field.name] = field
+    def begin_field(self, field: StructElement) -> None:
+        if isinstance(field, (Field, ArrayField)):
+            if field.name in self.fielddict:
+                self.error(f"field {field.name} defined more than once in the same struct")
+            self.fielddict[field.name] = field
 
     def begin_block(self, block: Block):
         self.last_param = None

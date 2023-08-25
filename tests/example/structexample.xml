@@ -10,13 +10,15 @@
         </pd:fields>
     </pd:struct>
     <pd:struct name="ComplexS" fill="parent">
-        <pd:comment>This struct will feature padding</pd:comment>
+        <pd:comment>This struct will feature padding and arrays</pd:comment>
         <pd:fields>
             <pd:field name="int1" type="uint8" />
+            <pd:padding size="4"/>
             <pd:field name="int2" type="uint64">
-                <pd:comment>I will introduce so much padding</pd:comment>
+                <pd:comment>I will need so much space</pd:comment>
             </pd:field>
-            <pd:field name="int3" type="uint16" />
+            <pd:padding size="2" />
+            <pd:arrayfield name="intarray" type="uint16" size="4"/>
         </pd:fields>
     </pd:struct>
     <pd:container name="CodeFlash" at="0x80000000">
