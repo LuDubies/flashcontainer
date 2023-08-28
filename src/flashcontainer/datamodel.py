@@ -262,7 +262,7 @@ class Parameter:
 
     def __init__(self, # pylint: disable=too-many-arguments
             offset: int, name: str, ptype: ParamType,
-            value: bytearray, crc: CrcData = None, datastruct = None):
+            value: bytearray, crc: CrcData = None, datastruct: "Datastruct" = None):
         self.offset = offset
         self.name = name
         self.ptype = ptype

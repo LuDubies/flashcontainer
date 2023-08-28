@@ -243,9 +243,10 @@ class XmlParser:
                 strct = [s for s in structs if s.name == sname][0]
 
                 data = ByteConvert.fill_struct_from_json(strct, val_text, block.endianess, block.fill)
+                parameter = DM.Parameter(offset, name, ptype, data, crc_cfg, datastruct=strct)
             else:
                 data = ByteConvert.json_to_bytes(ptype, block.endianess, val_text)
-            parameter = DM.Parameter(offset, name, ptype, data, crc_cfg)
+                parameter = DM.Parameter(offset, name, ptype, data, crc_cfg)
 
             comment = parameter_element.find(f"{{{NS}}}comment")
             if comment is not None:
