@@ -7,6 +7,10 @@
         <pd:fields>
             <pd:field name="int1" type="uint8" />
             <pd:field name="int2" type="uint8" />
+            <pd:crc name="smallcrc" type="uint8">
+                <pd:memory from="0x0000" to="."/>
+                <pd:config polynomial="0x55" init="0xFF"></pd:config>
+            </pd:crc>
         </pd:fields>
     </pd:struct>
     <pd:struct name="ComplexS" fill="parent">

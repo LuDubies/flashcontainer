@@ -97,7 +97,7 @@ class ByteConvert:
             fmt += DM.TYPE_DATA[component.type].fmt
             if isinstance(component, DM.Field):
                 data.extend(bytearray(struct.pack(fmt, input_dict[component.name])))
-            else:
+            elif isinstance(component, DM.ArrayField):
                 # check input validity for array
                 ain = input_dict[component.name]
                 if not isinstance(ain, list):
@@ -107,6 +107,17 @@ class ByteConvert:
                                            supplied with {len(ain)} values.")
                 for input_val in ain:
                     data.extend(bytearray(struct.pack(fmt, input_val)))
+            else:  # crc
+                calculator = DM.Crc(component.cfg)
+                buffer = calculator.prepare(data.copy())
+                crc_input = buffer[component.start: component.end + 1]
+                checksum = calculator.checksum(crc_input)
+                if endianess == DM.Endianness.LE:
+                    fmt = f"<{DM.TYPE_DATA[component.type].fmt}"
+                else:
+                    fmt = f">{DM.TYPE_DATA[component.type].fmt}"
+                byte_checksum = struct.pack(fmt, checksum)
+                data.extend(byte_checksum)
 
         return data
 

@@ -32,7 +32,7 @@
 import logging
 import pathlib
 import os
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 
 import lxml.etree as ET
 
@@ -146,19 +146,8 @@ class XmlParser:
         return 0x00 if (val_str is None) else XmlParser._parse_int(val_str)
 
     @staticmethod
-    def _parse_crc_config(param: ET.Element, block: DM.Block, offset: int) -> DM.CrcConfig:
-        """Parse a crc element.
-
-        Args:
-            param (ET.Element): The XML parameter element to read
-            block (DM.Block): current block
-            offset (int): offset of this parameter in block (used to resolve ".")
-
-        Returns:
-            A CrcConfig from the data model
-        """
-
-        mem_element = param.find(f"{{{NS}}}memory")
+    def _parse_crc_config(param: ET.Element) -> Tuple[int, int, int, bool, bool, bool]:
+        """Parse the configuration of a crc parameter or field"""
         cfg_element = param.find(f"{{{NS}}}config")
 
         defaults = CrcConfig()  # get defaults
@@ -175,19 +164,30 @@ class XmlParser:
             XmlParser._get_optional(cfg_element, 'rev_out',  defaults.revout))
         xor = XmlParser._parse_bool(
             XmlParser._get_optional(cfg_element, 'final_xor',  defaults.xor))
+        return (poly, width, init, revin, revout, xor)
 
-        # parse memory element
-        start = XmlParser.calc_addr(
-            block.addr,
-            offset,
-            XmlParser._get_optional(mem_element, "from", "0"),
-            1)
-        end = XmlParser.calc_addr(
-            block.addr,
-            offset,
-            XmlParser._get_optional(mem_element, "to", "."),
-            1)
+    @staticmethod
+    def _parse_crc_memory(param: ET.Element,
+                            offset: int,
+                            block: Optional[DM.Block] = None) -> Tuple[int, int, int, bool]:
+        """Parse the memory tag of a crc parameter or field"""
+        mem_element = param.find(f"{{{NS}}}memory")
+        if block is not None:
+            start = XmlParser.calc_addr(
+                block.addr,
+                offset,
+                XmlParser._get_optional(mem_element, "from", "0"),
+                1)
+            end = XmlParser.calc_addr(
+                block.addr,
+                offset,
+                XmlParser._get_optional(mem_element, "to", "."),
+                1)
+        else:
+            start = XmlParser.calc_addr(0x0, offset, XmlParser._get_optional(mem_element, "from", "0"), 1)
+            end = XmlParser.calc_addr(0x0, offset, XmlParser._get_optional(mem_element, "to", "."), 1)
 
+        defaults = CrcConfig()  # get defaults
         access = XmlParser._parse_int(
             XmlParser._get_optional(mem_element, 'access',  defaults.access))
         swap = XmlParser._parse_bool(XmlParser._get_optional(mem_element, 'swap',  defaults.swap))
@@ -195,6 +195,24 @@ class XmlParser:
         # special case for CRC: "." means end before current address, not at it.
         if "." == XmlParser._get_optional(mem_element, "to", "."):
             end = end - 1
+
+        return (start, end, access, swap)
+
+    @staticmethod
+    def _parse_crc_param(param: ET.Element, block: DM.Block, offset: int) -> DM.CrcConfig:
+        """Parse a crc parameter.
+
+        Args:
+            param (ET.Element): The XML parameter element to read
+            block (DM.Block): current block
+            offset (int): offset of this parameter in block (used to resolve ".")
+
+        Returns:
+            A CrcConfig from the data model
+        """
+
+        poly, width, init, revin, revout, xor = XmlParser._parse_crc_config(param)
+        start, end, access, swap = XmlParser._parse_crc_memory(param, offset, block=block)
 
         return DM.CrcData(
             crc_cfg=CrcConfig(
@@ -224,7 +242,7 @@ class XmlParser:
             val_text = None
 
             if f"{{{NS}}}crc" == parameter_element.tag:
-                crc_cfg = XmlParser._parse_crc_config(parameter_element, block, offset)
+                crc_cfg = XmlParser._parse_crc_param(parameter_element, block, offset)
                 val_text = '0x0'  # crc bits get calculated at end of block
                 logging.info("    got CRC data: %s", crc_cfg)
             else:
@@ -361,7 +379,7 @@ class XmlParser:
 
         fields_element = xml_element.find(f"{{{NS}}}fields")
         for element in fields_element:
-            if element.tag in (f"{{{NS}}}field", f"{{{NS}}}arrayfield"):
+            if element.tag in (f"{{{NS}}}field", f"{{{NS}}}arrayfield", f"{{{NS}}}crc"):
                 name = element.get("name")
                 btype = DM.BasicType[element.get("type").upper()]
                 comment = None
@@ -370,12 +388,13 @@ class XmlParser:
                     comment = field_comment.text
                 if element.tag == f"{{{NS}}}arrayfield":
                     count = XmlParser._parse_int(element.get("size"))
-                    afield = DM.ArrayField(name, btype, count, comment=comment)
-                    strct.add_field(afield)
-                else:
+                    field = DM.ArrayField(name, btype, count, comment=comment)
+                elif element.tag == f"{{{NS}}}field":
                     field = DM.Field(name, btype, comment=comment)
-                    strct.add_field(field)
+                else:  # crcfield
+                    cfargs = XmlParser._parse_crc_config(element)
+                    start, end, access, swap = XmlParser._parse_crc_memory(element, strct.get_size())
+                    field = DM.CrcField(name, btype, CrcConfig(*cfargs, access, swap), start, end)
+                strct.add_field(field)
             elif element.tag == f"{{{NS}}}padding":
-                size = XmlParser._parse_int(element.get("size"))
-                pad = DM.Padding(size)
-                strct.add_field(pad)
+                strct.add_field(DM.Padding(XmlParser._parse_int(element.get("size"))))

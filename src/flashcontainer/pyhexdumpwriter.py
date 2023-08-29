@@ -192,7 +192,7 @@ class PyHexDumpWriter(DM.Walker):
             offset = 0
             offset_needed = False
             for field in strct.fields:
-                if isinstance(field, (DM.Field, DM.ArrayField)):
+                if isinstance(field, (DM.Field, DM.ArrayField, DM.CrcField)):
                     element = {
                         "name": f"{field.name}",
                         "dataType": self._TYPE_MAPPING[field.type][i],

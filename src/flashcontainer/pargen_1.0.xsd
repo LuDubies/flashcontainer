@@ -69,6 +69,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
                         <xs:element name="field" type="pargen:field"/>
                         <xs:element name="arrayfield" type="pargen:arrayfield"/>
                         <xs:element name="padding" type="pargen:padding"/>
+                        <xs:element name="crc" type="pargen:crcfield"/>
                     </xs:choice>
                 </xs:complexType>
             </xs:element>
@@ -95,6 +96,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     <xs:complexType name="padding">
         <xs:attribute name="size" type="pargen:uint64"></xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="crcfield">
+        <xs:sequence>
+            <xs:element name="memory" type="pargen:memory" minOccurs="1" maxOccurs="1"></xs:element>
+            <xs:element name="config" type="pargen:crccfg" minOccurs="0" maxOccurs="1"></xs:element>
+        </xs:sequence>
+        <xs:attribute name="name" type="pargen:identifier" use="required" />
+        <xs:attribute name="type" type="pargen:type" use="required" />
     </xs:complexType>
 
     <xs:complexType name="block">

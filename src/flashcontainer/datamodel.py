@@ -400,6 +400,22 @@ class Padding(StructElement):
         return self.size
 
 
+@dataclass
+class CrcField(StructElement):
+    """Crc element to represent CRC in a struct"""
+    name: str
+    type: BasicType
+    cfg: CrcConfig
+    start: int
+    end: int
+
+    def __post_init__(self):
+        self.type = ParamType(self.type.value)
+
+    def get_size(self) -> int:
+        return TYPE_DATA[self.type].size
+
+
 class Datastruct:
     """ Class to hold struct type information """
 
@@ -427,8 +443,10 @@ class Datastruct:
         """Returns the size of all struct components combined"""
         return sum((f.get_size() for f in self.fields))
 
-    def get_field_names(self) -> List[str]:
+    def get_field_names(self, include_crcs: bool = False) -> List[str]:
         """Returns a list of all named fields names in the struct"""
+        if include_crcs:
+            return [f.name for f in self.fields if isinstance(f, (Field, ArrayField, CrcField))]
         return [f.name for f in self.fields if isinstance(f, (Field, ArrayField))]
 
     def __str__(self) -> str:
@@ -571,7 +589,7 @@ class Validator(Walker):
         self.fielddict = {}
 
     def begin_field(self, field: StructElement) -> None:
-        if isinstance(field, (Field, ArrayField)):
+        if isinstance(field, (Field, ArrayField, CrcField)):
             if field.name in self.fielddict:
                 self.error(f"field {field.name} defined more than once in the same struct")
             self.fielddict[field.name] = field
