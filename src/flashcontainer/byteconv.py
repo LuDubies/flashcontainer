@@ -32,7 +32,7 @@
 
 import struct
 import json5
-
+from lxml.etree import DocumentInvalid
 import flashcontainer.datamodel as DM
 
 class ByteConvert:
@@ -69,9 +69,58 @@ class ByteConvert:
             result.extend(b'\x00')
 
         else:
-            raise Exception(f"unsupported json value type {variant}") # pylint: disable=broad-except
+            raise DocumentInvalid(f"unsupported json value type {variant}")
 
         return result
+
+    @staticmethod
+    def fill_struct_from_json(strct: DM.Datastruct, input_str: str,
+                               endianess: DM.Endianness, blockfill: int) -> bytearray:
+        """Parse values for the structs field from JSON input"""
+
+        # check for invalid input
+        input_dict = json5.loads(input_str)
+        if not isinstance(input_dict, dict):
+            raise DocumentInvalid(f"Invalid input for struct:\n{input_str}")
+        if not set(strct.get_field_names()) == set(input_dict.keys()):
+            raise DocumentInvalid(f"struct {strct.name} field names and input keys are not equal")
+
+        data = bytearray()
+        for component in strct.fields:
+            if isinstance(component, DM.Padding):
+                if strct.filloption == "parent":
+                    data.extend(bytearray((blockfill for _ in range(component.size))))
+                else:
+                    data.extend(bytearray((strct.filloption for _ in range(component.size))))
+                continue
+            fmt = "<" if endianess == DM.Endianness.LE else ">"
+            fmt += DM.TYPE_DATA[component.type].fmt
+            if isinstance(component, DM.Field):
+                data.extend(bytearray(struct.pack(fmt, input_dict[component.name])))
+            elif isinstance(component, DM.ArrayField):
+                # check input validity for array
+                ain = input_dict[component.name]
+                if not isinstance(ain, list):
+                    raise DocumentInvalid(f"Invalid input for struct:\n{input_str}")
+                if len(ain) != component.count:
+                    raise DocumentInvalid(f"ArrayField {component.name} of size {component.count}\
+                                           supplied with {len(ain)} values.")
+                for input_val in ain:
+                    data.extend(bytearray(struct.pack(fmt, input_val)))
+            else:  # crc
+                calculator = DM.Crc(component.cfg)
+                buffer = calculator.prepare(data.copy())
+                crc_input = buffer[component.start: component.end + 1]
+                checksum = calculator.checksum(crc_input)
+
+                fmt = f"<{DM.TYPE_DATA[component.type].fmt}" if endianess == DM.Endianness.LE \
+                    else f">{DM.TYPE_DATA[component.type].fmt}"
+
+                byte_checksum = struct.pack(fmt, checksum)
+                data.extend(byte_checksum)
+
+        return data
+
 
     @staticmethod
     def bytes_to_c_init(ptype: DM.ParamType,  endianess: DM.Endianness, data: bytearray) -> str:
