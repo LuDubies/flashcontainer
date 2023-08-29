@@ -112,10 +112,10 @@ class ByteConvert:
                 buffer = calculator.prepare(data.copy())
                 crc_input = buffer[component.start: component.end + 1]
                 checksum = calculator.checksum(crc_input)
-                if endianess == DM.Endianness.LE:
-                    fmt = f"<{DM.TYPE_DATA[component.type].fmt}"
-                else:
-                    fmt = f">{DM.TYPE_DATA[component.type].fmt}"
+
+                fmt = f"<{DM.TYPE_DATA[component.type].fmt}" if endianess == DM.Endianness.LE \
+                    else f">{DM.TYPE_DATA[component.type].fmt}"
+
                 byte_checksum = struct.pack(fmt, checksum)
                 data.extend(byte_checksum)
 
