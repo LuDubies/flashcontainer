@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<pd:pargen xmlns:pd="http://nhjschulz.github.io/1.0/pargen"
+<pd:pargen xmlns:pd="http://nhjschulz.github.io/1.1/pargen"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://nhjschulz.github.io/1.0/pargen ./../../../src/flashcontainer/pargen_1.0.xsd" >
+    xsi:schemaLocation="http://nhjschulz.github.io/1.1/pargen http://nhjschulz.github.io/xsd/pargen_1.1.xsd" >
     <pd:struct name="SimpleS" fill="parent">
         <pd:comment>This struct is super simple</pd:comment>
         <pd:fields>
@@ -81,7 +81,7 @@
                         <pd:value>[3, 5]</pd:value>
                     </pd:param>
                     <pd:param offset="." name="biggy" type="complex" struct="ComplexS">
-                        <pd:value>{"int1": 1, "int2": 9999999, "intarray": [1, 4, 16, 64, 128]}</pd:value>
+                        <pd:value>{"int1": 1, "int2": 9999999, "intarray": [1, 4, 16, 64]}</pd:value>
                     </pd:param>
                 </pd:data>
             </pd:block>
