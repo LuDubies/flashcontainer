@@ -121,9 +121,19 @@ class ByteConvert:
 
         return data
 
+    @staticmethod
+    def value_to_c(value: int, type_data: DM.TypeData) -> str:
+        """Convert single value to valid C"""
+        if isinstance(value, float):
+            return f"{value:>{type_data.width}.8f}"
+        if isinstance(value, bytes):
+            return f"0x{value.hex().upper()}"
+        if type_data.signed:
+            return f"{value:>{type_data.width}}"
+        return f"0x{value:0{2*type_data.size}X}"
 
     @staticmethod
-    def bytes_to_c_init(ptype: DM.ParamType,  endianess: DM.Endianness, data: bytearray) -> str:
+    def bytes_to_c_init(ptype: DM.ParamType, endianess: DM.Endianness, data: bytearray) -> str:
         """Convert raw data to C-Language initializer"""
 
         result = ""
@@ -140,15 +150,7 @@ class ByteConvert:
         for i in range(0, entries):
             val = values[i]
 
-            if isinstance(val, float):
-                result += f"{val:>{type_data.width}.8f}"
-            elif isinstance(val, bytes):
-                result += f"0x{val.hex().upper()}"
-            else:
-                if type_data.signed:
-                    result += f"{val:>{type_data.width}}"
-                else:
-                    result += f"0x{val:0{2*type_data.size}X}"
+            result += ByteConvert.value_to_c(val, type_data)
 
             if i < (entries-1):
                 result += ', '
@@ -158,4 +160,41 @@ class ByteConvert:
         if 1 < entries:
             result += "\n}"
 
+        return result
+
+    @staticmethod
+    def struct_to_c_init(param: DM.Parameter, endianess: DM.Endianness) -> str:
+        """Get the data for the fields (reverse of fill_strct_from_json()) and parse as a C var init"""
+        strct = param.datastruct
+        data_idx = 0
+        result = "{"
+
+        for field in strct.fields:
+            result += "\n    "
+            data = param.value[data_idx: data_idx + field.get_size()]
+            data_idx += field.get_size()
+
+            if isinstance(field, (DM.Padding, DM.ArrayField)):
+                type_data = DM.TYPE_DATA[field.type] if isinstance(field, DM.ArrayField) else\
+                      DM.TYPE_DATA[DM.ParamType.UINT8]
+                fmt = "<" if endianess == DM.Endianness.LE else ">"
+                if isinstance(field, DM.Padding):
+                    fmt += type_data.fmt * field.get_size()
+                else:
+                    fmt += type_data.fmt * field.count
+                values = struct.unpack(fmt, data)
+                result += "{"
+                for i, val in enumerate(values):
+                    result += ByteConvert.value_to_c(val, type_data)
+                    if i < len(values)-1:
+                        result += ', '
+                result += "},"
+
+            if isinstance(field, (DM.Field, DM.CrcField)):
+                fmt = "<" if endianess == DM.Endianness.LE else ">"
+                fmt += DM.TYPE_DATA[field.type].fmt
+                value = struct.unpack(fmt, data)[0]
+                result += ByteConvert.value_to_c(value, DM.TYPE_DATA[field.type]) + ","
+
+        result += "\n}"
         return result
