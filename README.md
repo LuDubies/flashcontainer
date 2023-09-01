@@ -97,6 +97,7 @@ that the preceding element may appear multiple times:
               ...
           </pd:fields>
       </pd:struct>
+      ...
       <pd:container>
           <pd:blocks>
               <pd:block>
