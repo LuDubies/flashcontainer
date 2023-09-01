@@ -33,7 +33,7 @@ import logging
 import pathlib
 import os
 import re
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, Tuple
 
 import lxml.etree as ET
 
@@ -48,7 +48,8 @@ class XmlParser:
     """XML Parser to generate a datamodel from an XML file"""
 
     def __init__(self) -> None:
-        self.namespace = 'http://nhjschulz.github.io/1.0/pargen'
+        self.pd_ns = 'http://nhjschulz.github.io/1.0/pargen'
+        self.model = None
 
     @classmethod
     def from_file(cls, file: str, values: Dict[str, str] = None) -> Optional[DM.Model]:
@@ -70,7 +71,7 @@ class XmlParser:
 
                 schema_filename = f"pargen_{major}.{minor}.xsd"
                 schema_file = os.path.join(pathlib.Path(__file__).parent.resolve(), schema_filename)
-                self.namespace = f'http://nhjschulz.github.io/{major}.{minor}/pargen'
+                self.pd_ns = f'http://nhjschulz.github.io/{major}.{minor}/pargen'
 
             except  KeyError as exc:
                 raise ET.DocumentInvalid("No pd namespace configured on root element.") from exc
@@ -96,7 +97,7 @@ class XmlParser:
             for param_name, param_value in list(values.items()):
                 xpath = ET.XPath(
                     f"//pd:param[@name='{param_name}']/pd:value",
-                    namespaces={'pd': self.namespace}
+                    namespaces={'pd': self.pd_ns}
                 )
                 hits = xpath(root)
                 if hits:
@@ -158,7 +159,7 @@ class XmlParser:
 
     def _parse_crc_config(self, param: ET.Element) -> Tuple[int, int, int, bool, bool, bool]:
         """Parse the configuration of a crc parameter or field"""
-        cfg_element = param.find(f"{{{self.namespace}}}config")
+        cfg_element = param.find(f"{{{self.pd_ns}}}config")
 
         defaults = CrcConfig()  # get defaults
 
@@ -180,7 +181,7 @@ class XmlParser:
                             offset: int,
                             block: Optional[DM.Block] = None) -> Tuple[int, int, int, bool]:
         """Parse the memory tag of a crc parameter or field"""
-        mem_element = param.find(f"{{{self.namespace}}}memory")
+        mem_element = param.find(f"{{{self.pd_ns}}}memory")
         if block is not None:
             start = self.calc_addr(
                 block.addr,
@@ -230,13 +231,12 @@ class XmlParser:
             start=start,
             end=end)
 
-    def _build_parameters(self, block: DM.Block, element: ET.Element,
-                           structs: Optional[List[DM.Datastruct]] = None) -> None:
+    def _build_parameters(self, block: DM.Block, element: ET.Element) -> None:
         running_addr = block.addr
         if block.header is not None:
             running_addr += len(block.get_header_bytes())
 
-        for parameter_element in element.find(f"{{{self.namespace}}}data"):
+        for parameter_element in element.find(f"{{{self.pd_ns}}}data"):
 
             offset = self.calc_addr(
                 block.addr,
@@ -247,12 +247,12 @@ class XmlParser:
             crc_cfg = None
             val_text = None
 
-            if f"{{{self.namespace}}}crc" == parameter_element.tag:
+            if f"{{{self.pd_ns}}}crc" == parameter_element.tag:
                 crc_cfg = self._parse_crc_param(parameter_element, block, offset)
                 val_text = '0x0'  # crc bits get calculated at end of block
                 logging.info("    got CRC data: %s", crc_cfg)
             else:
-                value_element = parameter_element.find(f"{{{self.namespace}}}value")
+                value_element = parameter_element.find(f"{{{self.pd_ns}}}value")
                 val_text = value_element.text
 
             if ptype == DM.ParamType.COMPLEX:
@@ -261,10 +261,10 @@ class XmlParser:
                 if sname is None:
                     logging.critical("Parsing complex parameter with no struct attribute")
                     raise ET.DocumentInvalid("Parsing complex parameter with no struct attribute")
-                if structs is None or sname not in [s.name for s in structs]:
+                if self.model.datastructs is None or sname not in [s.name for s in self.model.datastructs]:
                     logging.critical("Parsing complex parameter with undefined struct name")
                     raise ET.DocumentInvalid("Parsing complex parameter with undefined struct name")
-                strct = [s for s in structs if s.name == sname][0]
+                strct = [s for s in self.model.datastructs if s.name == sname][0]
 
                 data = ByteConvert.fill_struct_from_json(strct, val_text, block.endianess, block.fill)
                 parameter = DM.Parameter(offset, parameter_element.get("name"), ptype, data, crc_cfg, datastruct=strct)
@@ -272,7 +272,7 @@ class XmlParser:
                 data = ByteConvert.json_to_bytes(ptype, block.endianess, val_text)
                 parameter = DM.Parameter(offset, parameter_element.get("name"), ptype, data, crc_cfg)
 
-            comment = parameter_element.find(f"{{{self.namespace}}}comment")
+            comment = parameter_element.find(f"{{{self.pd_ns}}}comment")
             if comment is not None:
                 parameter.set_comment(comment.text)
 
@@ -281,29 +281,29 @@ class XmlParser:
             running_addr = offset + len(data)
 
     def _build_model(self, root: ET.Element, filename: str) -> DM.Model:
-        model = DM.Model(filename)
+        self.model = DM.Model(filename)
 
         # iterate over structs and containers
         for element in root:
-            if element.tag == f"{{{self.namespace}}}container":
+            if element.tag == f"{{{self.pd_ns}}}container":
                 address = self._parse_int(element.get("at"))
                 name = element.get("name")
 
                 container = DM.Container(name, address)
                 logging.info("Loading container definition for %s", name)
-                self._build_blocks(container, element, structs=model.datastructs)
+                self._build_blocks(container, element)
 
-                model.add_container(container)
-            elif element.tag == f"{{{self.namespace}}}struct":
+                self.model.add_container(container)
+            elif element.tag == f"{{{self.pd_ns}}}struct":
                 name = element.get("name")
                 filloption = element.get("fill")
                 logging.info("Found struct with name %s and filloption %s!", name, filloption)
 
                 strct = DM.Datastruct(name, filloption)
                 self._build_struct(strct, element)
-                model.add_struct(strct)
+                self.model.add_struct(strct)
 
-        return model
+        return self.model
 
     def calc_addr(self, base_addr: int, running_addr: int, offset_str: str, alignment: int) -> int:
         """Calculate address from address input or '.'
@@ -331,14 +331,12 @@ class XmlParser:
 
         return result_addr
 
-    def _build_blocks(self, container: DM.Container,
-                        xml_element: ET.Element,
-                        structs: Optional[List[DM.Datastruct]] = None) -> None:
+    def _build_blocks(self, container: DM.Container, xml_element: ET.Element) -> None:
         """ Load block list for given container """
 
         running_addr = container.addr
 
-        for element in xml_element.find(f"{{{self.namespace}}}blocks"):
+        for element in xml_element.find(f"{{{self.pd_ns}}}blocks"):
             block_addr = self.calc_addr(
                 container.addr, running_addr, element.get("offset"), self.get_alignment(element))
             name = element.get("name")
@@ -348,14 +346,14 @@ class XmlParser:
             fill = self.get_fill(element)
             block = DM.Block(block_addr, name, length, endianess, fill)
 
-            comment = element.find(f"{{{self.namespace}}}comment")
+            comment = element.find(f"{{{self.pd_ns}}}comment")
             if comment is not None:
                 block.set_comment(comment.text)
 
             logging.info("  Loading block definition %s", block)
 
             # optional block header
-            header_element = element.find(f"{{{self.namespace}}}header")
+            header_element = element.find(f"{{{self.pd_ns}}}header")
             if header_element is not None:
                 block_id = self._parse_int(header_element.get("id"))
                 version = DM.Version(
@@ -365,7 +363,7 @@ class XmlParser:
                 )
                 block.set_header(DM.BlockHeader(block_id, version))
 
-            self._build_parameters(block, element, structs=structs)
+            self._build_parameters(block, element)
 
             block.fill_gaps()
             block.update_crcs()
@@ -375,29 +373,29 @@ class XmlParser:
 
     def _build_struct(self, strct: DM.Datastruct, xml_element: ET.Element) -> None:
         """ Parse the fields of a data structure"""
-        strct_comment = xml_element.find(f"{{{self.namespace}}}comment")
+        strct_comment = xml_element.find(f"{{{self.pd_ns}}}comment")
         if strct_comment is not None:
             strct.set_comment(strct_comment.text)
 
-        for element in xml_element.find(f"{{{self.namespace}}}fields"):
-            if element.tag in (f"{{{self.namespace}}}field",
-                                f"{{{self.namespace}}}arrayfield",
-                                  f"{{{self.namespace}}}crc"):
+        for element in xml_element.find(f"{{{self.pd_ns}}}fields"):
+            if element.tag in (f"{{{self.pd_ns}}}field",
+                                f"{{{self.pd_ns}}}arrayfield",
+                                  f"{{{self.pd_ns}}}crc"):
                 name = element.get("name")
                 btype = DM.BasicType[element.get("type").upper()]
                 comment = None
-                field_comment = element.find(f"{{{self.namespace}}}comment")
+                field_comment = element.find(f"{{{self.pd_ns}}}comment")
                 if field_comment is not None:
                     comment = field_comment.text
-                if element.tag == f"{{{self.namespace}}}arrayfield":
+                if element.tag == f"{{{self.pd_ns}}}arrayfield":
                     count = self._parse_int(element.get("size"))
                     field = DM.ArrayField(name, btype, count, comment=comment)
-                elif element.tag == f"{{{self.namespace}}}field":
+                elif element.tag == f"{{{self.pd_ns}}}field":
                     field = DM.Field(name, btype, comment=comment)
                 else:  # crcfield
                     cfargs = self._parse_crc_config(element)
                     start, end, access, swap = self._parse_crc_memory(element, strct.get_size())
                     field = DM.CrcField(name, btype, CrcConfig(*cfargs, access, swap), start, end)
                 strct.add_field(field)
-            elif element.tag == f"{{{self.namespace}}}padding":
+            elif element.tag == f"{{{self.pd_ns}}}padding":
                 strct.add_field(DM.Padding(self._parse_int(element.get("size"))))
